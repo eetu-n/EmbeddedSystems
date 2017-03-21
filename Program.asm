@@ -243,16 +243,18 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BPL	return				; If 
 			   BRA	waitloop
 ;
-	ftest:	  LOAD	R4	[GB + fall]
+	ftest:	  LOAD	R4	[GB + fall]		; {check if the fall tracker is already set to 1
 			   CMP	R4	1
-			   BEQ	return
-			  LOAD	R1	[R5	+ INPUT]
-			   AND	R1	%0100
-			   BEQ	return
+			   BEQ	return				; }
+			  LOAD	R1	[R5	+ INPUT]	; Load inputs
+			   AND	R1	%0100			; Consider only third input
+			   BEQ	return				; 
 			  LOAD	R4	1
 			  STOR	R4	[GB + fall]
 			   XOR	R3	%0100
 			   RTS
+;
+;	Debuging code to make things work with buttons and not with detection
 ;
 	debug:	  LOAD	R1	[R5 + INPUT]
 			   AND	R1	%010000000
@@ -264,9 +266,9 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BEQ	turn
 			   BRA	debug
 ;
-	fcheck:	  CLRI	8
-			  LOAD	R4	3
-			  STOR	R4	[GB + state]
+	fcheck:	  CLRI	8					; Don't listen for timer interrupts
+			  LOAD	R4	3				; {Set state to 3
+			  STOR	R4	[GB + state]	; }
 			   BRS	sod
 			   BRS	Hex7Seg
 			  STOR	R1	[R5 + DSPSEG]
@@ -275,27 +277,27 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R4	[GB + echeck]
 			   CMP	R4	1
 			   BEQ	error
-			  LOAD	R3	0
-			  STOR	R3	[R5 + OUTPUT]
-			  LOAD	R4	[GB + fall]
-			   CMP	R4	1
-			   BNE	start
+			  LOAD	R3	0				; {Set outputs to 0
+			  STOR	R3	[R5 + OUTPUT]	; }
+			  LOAD	R4	[GB + fall]		; Load fall sensor
+			   CMP	R4	1				; {If nothing fell, branch to error
+			   BNE	start				; }
 ;
-	precheck: LOAD	R3	%010000
+	precheck: LOAD	R3	%010000			; {Set disk checker LED on
 			  STOR	R3	[R5 + OUTPUT]
-			  LOAD	R2	999999999
+			  LOAD	R2	999999999		
 	loop6:	   BRS	wait1
 			   SUB	R2	1
 			   CMP	R2	0
-			   BNE	loop6
+			   BNE	loop6				; }
 			  LOAD	R1	[R5 + ADCONVS]
-			  LOAD	R3	0
-			  STOR	R3	[R5 + OUTPUT]
-			   CMP	R1	%000010000
-			   BMI	start
+			  LOAD	R3	0				; {Turn off LED
+			  STOR	R3	[R5 + OUTPUT]	; }
+			   CMP	R1	%010000			; Check sensor
+			   BMI	start				; If no disk present, branch to start
 ;
 	buck:	  LOAD	R3	%0100			; Set LED on
-			  STOR	R3	[R5 + OUTPUT]
+			  STOR	R3	[R5 + OUTPUT]	
 			  LOAD	R2	999999999
 	loop4:	   BRS	wait1
 			   SUB	R2	1
@@ -322,14 +324,14 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 ;
 	return:	   RTS
 ;
-	reset:	  CLRI	8
+	reset:	  CLRI	8					; Resets all relevant values and branch to push
 			  LOAD	R3	0
 			  STOR	R3	[R5 + OUTPUT]
 			  STOR	R3	[GB + fall]
 			  STOR	R3	[GB + switch]
 			   BRA	push
 ;
-	treset:	  CLRI	8
+	treset:	  CLRI	8					; Reset all relevant values and branch to turn
 			  LOAD	R3	0
 			  STOR	R3	[R5 + OUTPUT]
 			  STOR	R3	[GB	+ fall]
