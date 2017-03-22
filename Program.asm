@@ -158,6 +158,31 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 ;
 	oncheck:   CMP	R1 %01				; If R1 is 1
 			   BNE	return				; NOT return
+			  CLRI	8
+			  LOAD	R4	0
+			   SUB	R4	[R5 + TIMER]
+			  STOR	R4	[R5 + TIMER]
+			  LOAD	R4	10000
+			  STOR	R4	[R5 + TIMER]
+			  SETI	8
+			  LOAD	R4	3
+			  STOR	R4	[GB + cerror]
+;
+	floop:	  LOAD	R1	[R5 + INPUT]
+			   AND	R1	%0100
+			   CMP	R1	%0100
+			   BEQ	floop
+			  CLRI	8
+			  LOAD	R4	0
+			   SUB	R4	[R5 + TIMER]
+			  STOR	R4	[R5 + TIMER]
+			  LOAD	R4	10000
+			  STOR	R4	[R5 + TIMER]
+			  SETI	8
+			  LOAD	R4	4
+			  STOR	R4	[GB + cerror]
+			  LOAD	R3	0
+			  STOR	R3	[R5 + OUTPUT]
 			  LOAD	R4	1				; DO set switch to 1
 			  STOR	R4	[GB + switch]
 			   RTS						; return
@@ -267,6 +292,12 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   CMP	R1	%01000000
 			   BEQ	turn
 			   BRA	debug
+;
+	debug2:	  LOAD	R3	%01000
+	dloop:	   XOR	R3	%01100
+			  STOR	R3	[R5 + OUTPUT]
+			   BRS	wait1
+			   BRA	dloop
 ;
 	fcheck:	  CLRI	8
 			  LOAD	R4	3
@@ -473,8 +504,3 @@ recover:	   XOR	R3	%01				; Load 1 to R3
 			   RTE
 ;
 @END
-
-
-
-
-
