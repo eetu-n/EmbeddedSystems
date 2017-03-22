@@ -1,15 +1,16 @@
 @DATA
 
-	ldisk		DS	1	; Last disk, used to check if last disk is different from current disk
-	cdisk		DS	2	; Current disk
-	fall		DS	3	; Falling tracker, used to check if disk fell
-	switch		DS	4	; Switch tracker, used to check if a switch has been pressed (by a motor)
-	error		DS	5	; Used to store the error code
-	emergency	DS	6	; Used to debug emergency switch
-	dcount		DS	7	; Counts how many disks have been dispensed
-	state		DS	8	; Keeps track of current state
-	echeck		DS	9	; Enabled if the timer ISR is triggered
-	cerror		DS	10	; Keeps track of which error timer ISR should report, pushed to error
+	ldisk		DS	1
+	cdisk		DS	2
+	fall		DS	3
+	switch		DS	4
+	error		DS	5
+	emergency	DS	6
+	dcount		DS	7
+	state		DS	8
+	tmr			DS	9
+	echeck		DS	10
+	cerror		DS	11
 
 @CODE
 
@@ -47,98 +48,101 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 ;
 ;      The body of the main program
 ;
-	main:	  LOAD	R0	tmrisr			; {Enable the timer interrupt
+	main:	  LOAD	R0	tmrisr
 			   ADD	R0	R5
 			  LOAD	R1	16
-			  STOR	R0	[R1]			; }
+			  STOR	R0	[R1]
 			  LOAD	R0	0
-			  STOR	R0	[GB + state]	; Set state to 0 (starting state)
-			  STOR	R0	[GB + dcount]	; Set disc counter to 0
+			  STOR	R0	[GB + state]
+			  LOAD	R0	0
+			  STOR	R0	[GB + dcount]
 			  LOAD	R5	IOAREA			; R5 := "address of the area with the I/O-registers"
-			  LOAD	R4	0				
-			  STOR	R4	[GB + fall]		; Set fall tracket to 0
-			  LOAD	R0	0				; {Show 0 on digit 7
+			  LOAD	R4	0
+			  STOR	R4	[GB + fall]
+			  LOAD	R0	0
 			   BRS	Hex7Seg
 			  STOR	R1	[R5 + DSPSEG]
 			  LOAD	R1	%0100000
-			  STOR	R1	[R5	+ DSPDIG]	; }
-			   BRA	start				; Branch to start
+			  STOR	R1	[R5	+ DSPDIG]
+			   BRA	start
 ;
 	error:	  LOAD	R3	0
-			  STOR	R3	[GB + emergency]	; Set the emergency switch tracker to 0
-			  STOR	R3	[R5 + OUTPUT]		; Turn off all outputs
-			  LOAD	R0	[GB + error]		; Load error tracker
-			   BRS	Hex7Seg					; {Output error tracker to digit 1
+			  STOR	R3	[GB + emergency]
+			  STOR	R3	[R5 + OUTPUT]
+			  LOAD	R0	[GB + error]
+			   BRS	Hex7Seg
 			  STOR	R1	[R5 + DSPSEG]
 			  LOAD	R1	%01
-			  STOR	R1	[R5 + DSPDIG]		; }
-	erlo:	  LOAD	R1	[R5 + INPUT]		; Load input
-			   AND	R1	%010000000			; Consider only the emergency / start switch
-			   CMP	R1	%010000000			; Check if this switch is pressed
-			   BEQ	erlo					; If yes, stay in erlo
+			  STOR	R1	[R5 + DSPDIG]
+	erlo:	  LOAD	R1	[R5 + INPUT]
+			   AND	R1	%010000000
+			   CMP	R1	%010000000
+			   BEQ	erlo
 ;
-	start:	  LOAD	R1	[R5 + INPUT]	; Load inputs to R1
-			   AND	R1	%01000000		; Consider only the reset switch
-			   CMP	R1	%01000000		; Check if this switch is pressed
-			   BEQ	recover				; If yes, execute recovery procedure
+	start:	  LOAD	R1	[R5 + INPUT]
+			   AND	R1	%01000000
+			   CMP	R1	%01000000
+			   BEQ	recover
 			  LOAD	R1	[R5	+ INPUT]
-			   AND	R1	%010000000		; Consider only start switch
-			   CMP	R1	%010000000		; Check if it's pressed
-			   BNE	start				; If not, stay in start
+			   AND	R1	%010000000
+			   CMP	R1	%010000000
+			   BNE	start
 			  
 			  LOAD	R4	0
-			  STOR	R4	[GB + cdisk]	; Set current disk to 0
-			  STOR	R4	[GB + ldisk]	; Set last disk to 0
-			  LOAD	R3	%0100			; {Set LED on
-			  STOR	R3	[R5 + OUTPUT]	; }
-			  LOAD	R2	999999999		; {Turn on sensor LED for short period of time
+			  STOR	R4	[GB + cdisk]
+			  STOR	R4	[GB + ldisk]
+			  LOAD	R3	%0100			; Set LED on
+			  STOR	R3	[R5 + OUTPUT]
+			  LOAD	R2	999999999
 	loop5:	   BRS	wait1
 			   SUB	R2	1
 			   CMP	R2	0
-			   BNE	loop5				; }
+			   BNE	loop5
 			  LOAD	R1	[R5 + ADCONVS]	; Load sensor reading to R1
 			   CMP	R1	%011100110		; Check if R1 is less than this value; disk is white
 			   BMI	skip3
-			  LOAD	R4	1				; {Set both last disk and current disk to 1
+			  LOAD	R4	1
 			  STOR	R4	[GB + cdisk]
-			  STOR	R4	[GB + ldisk]	; }
+			  STOR	R4	[GB + ldisk]
 			  
 	skip3:	  LOAD	R3	0
-			  STOR	R3	[R5 + OUTPUT]	; Turn off all outputs
-			   BRA	fcheck				; Branch to fcheck
+			  STOR	R3	[R5 + OUTPUT]
+			   BRA	precheck
 ;		  
-	push:	  LOAD	R4	0				; { set a 1 second timer
+	push:	  LOAD	R4	0
 			   SUB	R4	[R5 + TIMER]
 			  STOR	R4	[R5 + TIMER]
 			  LOAD	R4	10000
-			  STOR	R4	[R5 + TIMER]	; }
-			  SETI	8					; Listen for timer interrupt
+			  STOR	R4	[R5 + TIMER]
+			  SETI	8
 			  LOAD	R4	4
-			  STOR	R4	[GB + cerror]	; Set current error to 4
+			  STOR	R4	[GB + cerror]
 			  LOAD	R4	1
-			  STOR	R4	[GB + state]	; Set state to 1
-			  LOAD	R4	[GB + dcount]	; {Increment disk counter
+			  STOR	R4	[GB + state]
+			  LOAD	R4	[GB + dcount]
 			   ADD	R4	1
-			  STOR	R4	[GB + dcount]	; }
-			   BRS	sod					; Check switch wheather to display state or disk counter
-			   BRS	Hex7Seg				; {Output this choice to display
+			  STOR	R4	[GB + dcount]
+			   BRS	sod
+			   BRS	Hex7Seg
 			  STOR	R1	[R5 + DSPSEG]
 			  LOAD	R1	%0100000
-			  STOR	R1	[R5 + DSPDIG]	; }
-	ploop:	  LOAD	R4	[GB + echeck]	; Check if error was triggered
+			  STOR	R1	[R5 + DSPDIG]
+	ploop:	  LOAD	R4	[GB + echeck]
 			   CMP	R4	1
-			   BEQ	error				; and branch to error if yes
-			  LOAD	R3	%01000			; Set fall sensor led on
-			   XOR	R3	%01				; Set push motor on
-			  STOR	R3	[R5 + OUTPUT]
+			   BEQ	error
+			  LOAD	R3	%01000
+			   XOR	R3	%01				; Load 1 to R3
+			  STOR	R3	[R5 + OUTPUT]	; Store R3 in output, turn on output1
 			  LOAD	R2	4				; Loop 4 times
 	loop:	   BRS	wait1				; Wait 1 tick
+			   BRS	ftest
 			   SUB	R2 1
 			   CMP	R2 0
 			   BNE	loop
-			   XOR	R3	%01				; Set push motor off
-			  STOR	R3	[R5 + OUTPUT]
+			   XOR	R3	%01				; Load 0 to R3
+			  STOR	R3	[R5 + OUTPUT]	; Store R3 in output, turn off output1
 			   BRS	wait1				; wait for 1 tick
+			   BRS	ftest
 ;
 			  LOAD	R1	[R5 + INPUT]
 			   AND	R1	%01				; Only consider switch 1
@@ -243,18 +247,16 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BPL	return				; If 
 			   BRA	waitloop
 ;
-	ftest:	  LOAD	R4	[GB + fall]		; {check if the fall tracker is already set to 1
+	ftest:	  LOAD	R4	[GB + fall]
 			   CMP	R4	1
-			   BEQ	return				; }
-			  LOAD	R1	[R5	+ INPUT]	; Load inputs
-			   AND	R1	%0100			; Consider only third input
-			   BEQ	return				; 
+			   BEQ	return
+			  LOAD	R1	[R5	+ INPUT]
+			   AND	R1	%0100
+			   BEQ	return
 			  LOAD	R4	1
 			  STOR	R4	[GB + fall]
 			   XOR	R3	%0100
 			   RTS
-;
-;	Debuging code to make things work with buttons and not with detection
 ;
 	debug:	  LOAD	R1	[R5 + INPUT]
 			   AND	R1	%010000000
@@ -266,9 +268,9 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BEQ	turn
 			   BRA	debug
 ;
-	fcheck:	  CLRI	8					; Don't listen for timer interrupts
-			  LOAD	R4	3				; {Set state to 3
-			  STOR	R4	[GB + state]	; }
+	fcheck:	  CLRI	8
+			  LOAD	R4	3
+			  STOR	R4	[GB + state]
 			   BRS	sod
 			   BRS	Hex7Seg
 			  STOR	R1	[R5 + DSPSEG]
@@ -277,27 +279,27 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R4	[GB + echeck]
 			   CMP	R4	1
 			   BEQ	error
-			  LOAD	R3	0				; {Set outputs to 0
-			  STOR	R3	[R5 + OUTPUT]	; }
-			  LOAD	R4	[GB + fall]		; Load fall sensor
-			   CMP	R4	1				; {If nothing fell, branch to error
-			   BNE	start				; }
-;
-	precheck: LOAD	R3	%010000			; {Set disk checker LED on
+			  LOAD	R3	0
 			  STOR	R3	[R5 + OUTPUT]
-			  LOAD	R2	999999999		
+			  LOAD	R4	[GB + fall]
+			   CMP	R4	1
+			   BNE	start
+;
+	precheck: LOAD	R3	%010000
+			  STOR	R3	[R5 + OUTPUT]
+			  LOAD	R2	999999999
 	loop6:	   BRS	wait1
 			   SUB	R2	1
 			   CMP	R2	0
-			   BNE	loop6				; }
+			   BNE	loop6
 			  LOAD	R1	[R5 + ADCONVS]
-			  LOAD	R3	0				; {Turn off LED
-			  STOR	R3	[R5 + OUTPUT]	; }
-			   CMP	R1	%010000			; Check sensor
-			   BMI	start				; If no disk present, branch to start
+			  LOAD	R3	0
+			  STOR	R3	[R5 + OUTPUT]
+			   CMP	R1	%000010000
+			   BMI	start
 ;
 	buck:	  LOAD	R3	%0100			; Set LED on
-			  STOR	R3	[R5 + OUTPUT]	
+			  STOR	R3	[R5 + OUTPUT]
 			  LOAD	R2	999999999
 	loop4:	   BRS	wait1
 			   SUB	R2	1
@@ -324,14 +326,14 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 ;
 	return:	   RTS
 ;
-	reset:	  CLRI	8					; Resets all relevant values and branch to push
+	reset:	  CLRI	8
 			  LOAD	R3	0
 			  STOR	R3	[R5 + OUTPUT]
 			  STOR	R3	[GB + fall]
 			  STOR	R3	[GB + switch]
 			   BRA	push
 ;
-	treset:	  CLRI	8					; Reset all relevant values and branch to turn
+	treset:	  CLRI	8
 			  LOAD	R3	0
 			  STOR	R3	[R5 + OUTPUT]
 			  STOR	R3	[GB	+ fall]
