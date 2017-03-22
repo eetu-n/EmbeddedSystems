@@ -165,7 +165,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R4	10000
 			  STOR	R4	[R5 + TIMER]
 			  SETI	8
-			  LOAD	R4	3
+			  LOAD	R4	5
 			  STOR	R4	[GB + cerror]
 ;
 	floop:	  LOAD	R1	[R5 + INPUT]
@@ -220,7 +220,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BRS	wait1				; Wait 1 tick
 ;
 			  LOAD	R1	[R5 + INPUT]	; Load input to R1
-			   AND	R1	%010			; Consider only bucket switches
+			   AND	R1	%01010			; Consider only bucket switches
 			  LOAD	R4	[GB + switch]
 			   CMP	R4	1
 			   BNE	skip2
@@ -251,7 +251,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BEQ	reset
 			   BRA	turn3
 ;
-	oncheck2:  CMP	R1 %010				; If switch 2 is pressed
+	oncheck2:  CMP	R1 %01010			; If switch 2 is pressed
 			   BNE	return				; NOT return
 			  LOAD	R4	1				; DO set switch to 1
 			  STOR	R4	[GB + switch]
@@ -282,22 +282,6 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  STOR	R4	[GB + fall]
 			   XOR	R3	%0100
 			   RTS
-;
-	debug:	  LOAD	R1	[R5 + INPUT]
-			   AND	R1	%010000000
-			   CMP	R1	%010000000
-			   BEQ	reset
-			  LOAD	R1	[R5 + INPUT]
-			   AND	R1	%01000000
-			   CMP	R1	%01000000
-			   BEQ	turn
-			   BRA	debug
-;
-	debug2:	  LOAD	R3	%01000
-	dloop:	   XOR	R3	%01100
-			  STOR	R3	[R5 + OUTPUT]
-			   BRS	wait1
-			   BRA	dloop
 ;
 	fcheck:	  CLRI	8
 			  LOAD	R4	3
@@ -458,7 +442,7 @@ recover:	   XOR	R3	%01				; Load 1 to R3
 			   BRS	wait1				; Wait 1 tick
 ;
 			  LOAD	R1	[R5 + INPUT]	; Load input to R1
-			   AND	R1	%010			; Consider only bucket switches
+			   AND	R1	%01010			; Consider only bucket switches
 			  LOAD	R4	[GB + switch]
 			   CMP	R4	1
 			   BNE	rskip2
