@@ -206,7 +206,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 ;
 	turn1:	  LOAD	R4	[GB + echeck]
 			   CMP	R4	1
-			   BEQ	ch2
+			   BEQ	error
 			   XOR	R3	%010			; Set motor 2 on
 			  STOR	R3	[R5 + OUTPUT]	
 			  LOAD	R2	8				; loop 4 times
@@ -317,7 +317,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R1	[R5 + INPUT]
 			   AND	R1	%01000
 			   CMP	R1	%01000
-			   BNE	return
+			   BNE	sreturn
 			   BRA	sloop3
 ;
 	scheck4:  CLRI	8
@@ -335,8 +335,12 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R1	[R5 + INPUT]
 			   AND	R1	%010
 			   CMP	R1	%010
-			   BNE	return
+			   BNE	sreturn
 			   BRA	sloop4
+;
+	sreturn:  LOAD	R4	9
+			  STOR	R4	[GB + cerror]
+			   RTS
 ;
 ;	End of turning state
 ;
@@ -483,22 +487,6 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   CMP	R4	%010000000
 			   BEQ	er1
 			   RTS
-;
-;	Error 2: Bucket switches out of sync.
-;
-	er2:	  LOAD	R3	2
-			  STOR	R3	[GB + error]
-			   BRA	error
-;
-	ch2:	  LOAD	R4	[R5	+ INPUT]
-			  LOAD	R0	R4
-			   AND	R4	%010
-			   DIV	R4	%010
-			   AND	R0	%01000
-			   DIV	R0	%01000
-			   CMP	R4	R0
-			   BNE	er2
-			   BRA	error
 ;
 ;
 ;
