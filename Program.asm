@@ -2,15 +2,14 @@
 
 	ldisk		DS	1
 	cdisk		DS	2
-	fall		DS	3
-	switch		DS	4
-	error		DS	5
-	emergency	DS	6
-	dcount		DS	7
-	state		DS	8
-	tmr			DS	9
+	switch		DS	3
+	error		DS	4
+	emergency	DS	5
+	dcount		DS	6
+	state		DS	7
+	tmr			DS	8
+	cerror		DS	9
 	echeck		DS	10
-	cerror		DS	11
 
 @CODE
 
@@ -57,8 +56,6 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R0	0
 			  STOR	R0	[GB + dcount]
 			  LOAD	R5	IOAREA			; R5 := "address of the area with the I/O-registers"
-			  LOAD	R4	0
-			  STOR	R4	[GB + fall]
 			  LOAD	R0	0
 			   BRS	Hex7Seg
 			  STOR	R1	[R5 + DSPSEG]
@@ -66,18 +63,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  STOR	R1	[R5	+ DSPDIG]
 			   BRA	start
 ;
-	error:	  LOAD	R3	0
-			  STOR	R3	[GB + emergency]
-			  STOR	R3	[R5 + OUTPUT]
-			  LOAD	R0	[GB + error]
-			   BRS	Hex7Seg
-			  STOR	R1	[R5 + DSPSEG]
-			  LOAD	R1	%01
-			  STOR	R1	[R5 + DSPDIG]
-	erlo:	  LOAD	R1	[R5 + INPUT]
-			   AND	R1	%010000000
-			   CMP	R1	%010000000
-			   BEQ	erlo
+;	Initial state
 ;
 	start:	  LOAD	R1	[R5 + INPUT]
 			   AND	R1	%01000000
@@ -87,7 +73,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   AND	R1	%010000000
 			   CMP	R1	%010000000
 			   BNE	start
-			  
+;
 			  LOAD	R4	0
 			  STOR	R4	[GB + cdisk]
 			  STOR	R4	[GB + ldisk]
@@ -107,8 +93,14 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  
 	skip3:	  LOAD	R3	0
 			  STOR	R3	[R5 + OUTPUT]
-			   BRA	precheck
-;		  
+			   BRA	fcheck
+;
+;	End of initial state
+;
+
+;
+;	Pushing state
+;
 	push:	  LOAD	R4	0
 			   SUB	R4	[R5 + TIMER]
 			  STOR	R4	[R5 + TIMER]
@@ -135,14 +127,12 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  STOR	R3	[R5 + OUTPUT]	; Store R3 in output, turn on output1
 			  LOAD	R2	4				; Loop 4 times
 	loop:	   BRS	wait1				; Wait 1 tick
-			   BRS	ftest
 			   SUB	R2 1
 			   CMP	R2 0
 			   BNE	loop
 			   XOR	R3	%01				; Load 0 to R3
 			  STOR	R3	[R5 + OUTPUT]	; Store R3 in output, turn off output1
 			   BRS	wait1				; wait for 1 tick
-			   BRS	ftest
 ;
 			  LOAD	R1	[R5 + INPUT]
 			   AND	R1	%01				; Only consider switch 1
@@ -165,11 +155,14 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R4	10000
 			  STOR	R4	[R5 + TIMER]
 			  SETI	8
-			  LOAD	R4	3
+			  LOAD	R4	5
 			  STOR	R4	[GB + cerror]
 ;
 	floop:	  LOAD	R1	[R5 + INPUT]
 			   AND	R1	%0100
+			  LOAD	R4	[GB + echeck]
+			   CMP	R4	1
+			   BEQ	error
 			   CMP	R1	%0100
 			   BEQ	floop
 			  CLRI	8
@@ -187,10 +180,16 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  STOR	R4	[GB + switch]
 			   RTS						; return
 ;
+;	End of pushing state
+;
+
+;
+;	Turning state
+;
 	turn:	  LOAD	R4	0
 			   SUB	R4	[R5 + TIMER]
 			  STOR	R4	[R5 + TIMER]
-			  LOAD	R4	25000
+			  LOAD	R4	20000
 			  STOR	R4	[R5 + TIMER]
 			  SETI	8
 			  LOAD	R4	3
@@ -207,7 +206,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 ;
 	turn1:	  LOAD	R4	[GB + echeck]
 			   CMP	R4	1
-			   BEQ	error
+			   BEQ	ch2
 			   XOR	R3	%010			; Set motor 2 on
 			  STOR	R3	[R5 + OUTPUT]	
 			  LOAD	R2	8				; loop 4 times
@@ -220,7 +219,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BRS	wait1				; Wait 1 tick
 ;
 			  LOAD	R1	[R5 + INPUT]	; Load input to R1
-			   AND	R1	%010			; Consider only bucket switches
+			   AND	R1	%01010			; Consider only bucket switches
 			  LOAD	R4	[GB + switch]
 			   CMP	R4	1
 			   BNE	skip2
@@ -248,56 +247,102 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R1	[R5 + INPUT]
 			   AND	R1	%010
 			   CMP	R1	%010
-			   BEQ	reset
+			   BEQ	scheck
+			  LOAD	R1	[R5 + INPUT]
+			   AND	R1	%01000
+			   CMP	R1	%01000
+			   BEQ	scheck2
 			   BRA	turn3
 ;
-	oncheck2:  CMP	R1 %010				; If switch 2 is pressed
-			   BNE	return				; NOT return
+	oncheck2: LOAD	R1	[R5 + INPUT]
+			   AND	R1	%010
+			   CMP	R1	%010			; If switch 2 is pressed
+			   BNE	scheck3				; NOT return
+			  LOAD	R1	[R5 + INPUT]
+			   AND	R1	%01000
+			   CMP	R1	%01000
+			   BNE	scheck4
 			  LOAD	R4	1				; DO set switch to 1
 			  STOR	R4	[GB + switch]
 			   RTS						; return
 ;
-	sod:	  LOAD	R0	[R5]
-			   AND	R0	%01
-			   CMP	R0	%01
-			   BEQ	st
-			  LOAD	R0	[GB + dcount]
-			   RTS
-	st:		  LOAD	R0	[GB + state]
-			   RTS
-;
-	wait1:	  LOAD	R1	[R5+TIMER]		; Load timer into R1
-	waitloop:  BRS	ch1
-			   CMP	R1	[R5+TIMER]		; Compare R1 to timer
-			   BPL	return				; If 
-			   BRA	waitloop
-;
-	ftest:	  LOAD	R4	[GB + fall]
+	scheck:	  CLRI	8
+			  LOAD	R4	0
+			   SUB	R4	[R5 + TIMER]
+			  STOR	R4	[R5 + TIMER]
+			  LOAD	R4	1000
+			  STOR	R4	[R5 + TIMER]
+			  SETI	8
+			  LOAD	R4	2
+			  STOR	R4	[GB + cerror]
+	sloop:	  LOAD	R4	[GB + echeck]
 			   CMP	R4	1
-			   BEQ	return
-			  LOAD	R1	[R5	+ INPUT]
-			   AND	R1	%0100
-			   BEQ	return
-			  LOAD	R4	1
-			  STOR	R4	[GB + fall]
-			   XOR	R3	%0100
-			   RTS
-;
-	debug:	  LOAD	R1	[R5 + INPUT]
-			   AND	R1	%010000000
-			   CMP	R1	%010000000
-			   BEQ	reset
+			   BEQ	error
 			  LOAD	R1	[R5 + INPUT]
-			   AND	R1	%01000000
-			   CMP	R1	%01000000
-			   BEQ	turn
-			   BRA	debug
+			   AND	R1	%01000
+			   CMP	R1	%01000
+			   BEQ	reset
+			   BRA	sloop
 ;
-	debug2:	  LOAD	R3	%01000
-	dloop:	   XOR	R3	%01100
-			  STOR	R3	[R5 + OUTPUT]
-			   BRS	wait1
-			   BRA	dloop
+	scheck2:  CLRI	8
+			  LOAD	R4	0
+			   SUB	R4	[R5 + TIMER]
+			  STOR	R4	[R5 + TIMER]
+			  LOAD	R4	1000
+			  STOR	R4	[R5 + TIMER]
+			  SETI	8
+			  LOAD	R4	6
+			  STOR	R4	[GB + cerror]
+	sloop2:	  LOAD	R4	[GB + echeck]
+			   CMP	R4	1
+			   BEQ	error
+			  LOAD	R1	[R5 + INPUT]
+			   AND	R1	%010
+			   CMP	R1	%010
+			   BEQ	reset	
+			   BRA	sloop2
+;
+	scheck3:  CLRI	8
+			  LOAD	R4	0
+			   SUB	R4	[R5 + TIMER]
+			  STOR	R4	[R5 + TIMER]
+			  LOAD	R4	1000
+			  STOR	R4	[R5 + TIMER]
+			  SETI	8
+			  LOAD	R4	7
+			  STOR	R4	[GB + cerror]
+	sloop3:	  LOAD	R4	[GB + echeck]
+			   CMP	R4	1
+			   BEQ	error
+			  LOAD	R1	[R5 + INPUT]
+			   AND	R1	%01000
+			   CMP	R1	%01000
+			   BNE	return
+			   BRA	sloop3
+;
+	scheck4:  CLRI	8
+			  LOAD	R4	0
+			   SUB	R4	[R5 + TIMER]
+			  STOR	R4	[R5 + TIMER]
+			  LOAD	R4	1000
+			  STOR	R4	[R5 + TIMER]
+			  SETI	8
+			  LOAD	R4	8
+			  STOR	R4	[GB + cerror]
+	sloop4:	  LOAD	R4	[GB + echeck]
+			   CMP	R4	1
+			   BEQ	error
+			  LOAD	R1	[R5 + INPUT]
+			   AND	R1	%010
+			   CMP	R1	%010
+			   BNE	return
+			   BRA	sloop4
+;
+;	End of turning state
+;
+
+;
+;	Disk detection state
 ;
 	fcheck:	  CLRI	8
 			  LOAD	R4	3
@@ -312,11 +357,8 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BEQ	error
 			  LOAD	R3	0
 			  STOR	R3	[R5 + OUTPUT]
-			  LOAD	R4	[GB + fall]
-			   CMP	R4	1
-			   BNE	start
 ;
-	precheck: LOAD	R3	%010000
+			  LOAD	R3	%010000
 			  STOR	R3	[R5 + OUTPUT]
 			  LOAD	R2	999999999
 	loop6:	   BRS	wait1
@@ -327,7 +369,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R3	0
 			  STOR	R3	[R5 + OUTPUT]
 			   CMP	R1	%000010000
-			   BMI	start
+			   BMI	rset
 ;
 	buck:	  LOAD	R3	%0100			; Set LED on
 			  STOR	R3	[R5 + OUTPUT]
@@ -355,25 +397,69 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  STOR	R4	[GB + ldisk]
 			   BRA	treset				; turn reset
 ;
+;	End of disk detection state
+;
+
+;
+;	Misc. subroutines
+;
 	return:	   RTS
 ;
 	reset:	  CLRI	8
 			  LOAD	R3	0
 			  STOR	R3	[R5 + OUTPUT]
-			  STOR	R3	[GB + fall]
 			  STOR	R3	[GB + switch]
 			   BRA	push
 ;
 	treset:	  CLRI	8
 			  LOAD	R3	0
 			  STOR	R3	[R5 + OUTPUT]
-			  STOR	R3	[GB	+ fall]
 			  STOR	R3	[GB + switch]
 			   BRA	turn
 ;
-;	Error reporting subroutines
+	sod:	  LOAD	R0	[R5]
+			   AND	R0	%01
+			   CMP	R0	%01
+			   BEQ	st
+			  LOAD	R0	[GB + dcount]
+			   RTS
+	st:		  LOAD	R0	[GB + state]
+			   RTS
+;
+	wait1:	  LOAD	R1	[R5+TIMER]		; Load timer into R1
+	waitloop:  BRS	ch1
+			   CMP	R1	[R5+TIMER]		; Compare R1 to timer
+			   BPL	return				; If 
+			   BRA	waitloop
+;
+;	End of misc. subroutines
 ;
 
+;
+;	Error reporting subroutines
+;
+	error:	  LOAD	R3	0
+			  STOR	R3	[GB + ldisk]
+			  STOR	R3	[GB + cdisk]
+			  STOR	R3	[GB + switch]
+			  STOR	R3	[GB + emergency]
+			  STOR	R3	[GB + dcount]
+			  STOR	R3	[GB + state]
+			  STOR	R3	[GB + tmr]
+			  STOR	R3	[GB + echeck]
+			  STOR	R3	[GB + cerror]
+			  STOR	R3	[R5 + OUTPUT]
+			  LOAD	R0	[GB + error]
+			  STOR	R3	[GB + error]
+			   BRS	Hex7Seg
+			  STOR	R1	[R5 + DSPSEG]
+			  LOAD	R1	%01
+			  STOR	R1	[R5 + DSPDIG]
+	erlo:	  LOAD	R1	[R5 + INPUT]
+			   AND	R1	%010000000
+			   CMP	R1	%010000000
+			   BEQ	erlo
+			   BRA	start
 ;
 ;	Error 1: emergency switch is pressed.
 ;
@@ -412,7 +498,11 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   DIV	R0	%01000
 			   CMP	R4	R0
 			   BNE	er2
-			   RTS
+			   BRA	error
+;
+;
+;
+  
 ;
 ;	End of errors
 ;
@@ -440,7 +530,7 @@ recover:	   XOR	R3	%01				; Load 1 to R3
 			   BEQ	rturn				; If not, branch to precheck
 			   BRA  recover				; If yes, loop to push
 ;
-	rskip:	   BRS	oncheck				; BRS to oncheck
+	rskip:	   BRS	roncheck				; BRS to oncheck
 			   BRA	recover				; Loop back to push
 ;
 	rturn:	  LOAD	R4	0				; Set switch to 0
@@ -458,7 +548,7 @@ recover:	   XOR	R3	%01				; Load 1 to R3
 			   BRS	wait1				; Wait 1 tick
 ;
 			  LOAD	R1	[R5 + INPUT]	; Load input to R1
-			   AND	R1	%010			; Consider only bucket switches
+			   AND	R1	%01010			; Consider only bucket switches
 			  LOAD	R4	[GB + switch]
 			   CMP	R4	1
 			   BNE	rskip2
@@ -486,14 +576,30 @@ recover:	   XOR	R3	%01				; Load 1 to R3
 			   BRA	rturn3
 ;
 	rset:	  LOAD	R0	0
+			  STOR	R0	[GB + ldisk]
+			  STOR	R0	[GB + cdisk]
 			  STOR	R0	[GB + switch]
 			  STOR	R0	[GB + error]
 			  STOR	R0	[GB + emergency]
+			  STOR	R0	[GB + dcount]
+			  STOR	R0	[GB + state]
+			  STOR	R0	[GB + tmr]
+			  STOR	R0	[GB + echeck]
+			  STOR	R0	[GB + cerror]
 			  STOR	R0	[R5 + OUTPUT]
-			  STOR	R0	[R5+DSPSEG]
-			  LOAD	R0	%01
-			  STOR	R0	[R5+DSPDIG]
+			  LOAD	R0	%01111110
+			  STOR	R0	[R5 + DSPSEG]
+			  LOAD	R0	%0100000
+			  STOR	R0	[R5	+ DSPDIG]
+			  CLRI	8
 			   BRA	start
+;
+	roncheck:  CMP	R1 %01				; If R1 is 1
+			   BNE	return				; NOT return
+			  LOAD	R4	1				; DO set switch to 1
+			  STOR	R4	[GB + switch]
+			   RTS						; return			  
+;
 ;
 ;	ISRs
 ;
