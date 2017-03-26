@@ -81,6 +81,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  STOR	R3	[R5 + OUTPUT]
 			  LOAD	R2	999999999
 	loop5:	   BRS	wait1
+			   BRS	ch1
 			   SUB	R2	1
 			   CMP	R2	0
 			   BNE	loop5
@@ -101,13 +102,21 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 ;
 ;	Pushing state
 ;
-	push:	  LOAD	R4	0
+	push:	  LOAD	R3	%01000
+			  STOR	R3	[R5 + OUTPUT]
+			  LOAD	R2	999999999
+	loop7:	   BRS	wait1
+			   BRS	ch1
+			   SUB	R2	1
+			   CMP	R2	0
+			   BNE	loop7
+			  LOAD	R4	0
 			   SUB	R4	[R5 + TIMER]
 			  STOR	R4	[R5 + TIMER]
 			  LOAD	R4	10000
 			  STOR	R4	[R5 + TIMER]
 			  SETI	8
-			  LOAD	R4	4
+			  LOAD	R4	7
 			  STOR	R4	[GB + cerror]
 			  LOAD	R4	1
 			  STOR	R4	[GB + state]
@@ -122,19 +131,28 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 	ploop:	  LOAD	R4	[GB + echeck]
 			   CMP	R4	1
 			   BEQ	error
-			  LOAD	R3	%01000
-			   XOR	R3	%01				; Load 1 to R3
+			   XOR	R3	%01
 			  STOR	R3	[R5 + OUTPUT]	; Store R3 in output, turn on output1
 			  LOAD	R2	4				; Loop 4 times
 	loop:	   BRS	wait1				; Wait 1 tick
+			   BRS	ch1
 			   SUB	R2 1
 			   CMP	R2 0
 			   BNE	loop
 			   XOR	R3	%01				; Load 0 to R3
 			  STOR	R3	[R5 + OUTPUT]	; Store R3 in output, turn off output1
 			   BRS	wait1				; wait for 1 tick
+			   BRS	ch1
 ;
+			  LOAD	R4	[GB + switch]
+			   CMP	R4	1
+			   BEQ	skip5
 			  LOAD	R1	[R5 + INPUT]
+			   AND	R1	%0100
+			   CMP	R1	%0100
+			   BNE	erA
+;
+	skip5:	  LOAD	R1	[R5 + INPUT]
 			   AND	R1	%01				; Only consider switch 1
 			  LOAD	R4	[GB + switch]
 			   CMP	R4	1				; Check if switch has been on
@@ -155,7 +173,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R4	10000
 			  STOR	R4	[R5 + TIMER]
 			  SETI	8
-			  LOAD	R4	5
+			  LOAD	R4	8
 			  STOR	R4	[GB + cerror]
 ;
 	floop:	  LOAD	R1	[R5 + INPUT]
@@ -192,7 +210,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R4	20000
 			  STOR	R4	[R5 + TIMER]
 			  SETI	8
-			  LOAD	R4	3
+			  LOAD	R4	6
 			  STOR	R4	[GB + cerror]
 			  LOAD	R4	0				; Set switch to 0
 			  STOR	R4	[GB + switch]
@@ -211,12 +229,14 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  STOR	R3	[R5 + OUTPUT]	
 			  LOAD	R2	8				; loop 4 times
 	loop2:	   BRS	wait1				; Wait 1 tick
+			   BRS	ch1
 			   SUB	R2	1
 			   CMP	R2	0
 			   BNE	loop2
 			   XOR	R3	%010			; Turn off motor 2
 			  STOR	R3	[R5 + OUTPUT]
 			   BRS	wait1				; Wait 1 tick
+			   BRS	ch1
 ;
 			  LOAD	R1	[R5 + INPUT]	; Load input to R1
 			   AND	R1	%01010			; Consider only bucket switches
@@ -237,12 +257,14 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  STOR	R3	[R5 + OUTPUT]	
 			  LOAD	R2	4				; loop 4 times
 	loop3:	   BRS	wait1				; Wait 1 tick
+			   BRS	ch1
 			   SUB	R2	1
 			   CMP	R2	0
 			   BNE	loop3
 			   XOR	R3	%010			; Turn off motor 2
 			  STOR	R3	[R5 + OUTPUT]
 			   BRS	wait1				; Wait 1 tick
+			   BRS	ch1
 			  
 			  LOAD	R1	[R5 + INPUT]
 			   AND	R1	%010
@@ -291,7 +313,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R4	1000
 			  STOR	R4	[R5 + TIMER]
 			  SETI	8
-			  LOAD	R4	6
+			  LOAD	R4	3
 			  STOR	R4	[GB + cerror]
 	sloop2:	  LOAD	R4	[GB + echeck]
 			   CMP	R4	1
@@ -309,7 +331,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R4	1000
 			  STOR	R4	[R5 + TIMER]
 			  SETI	8
-			  LOAD	R4	7
+			  LOAD	R4	4
 			  STOR	R4	[GB + cerror]
 	sloop3:	  LOAD	R4	[GB + echeck]
 			   CMP	R4	1
@@ -327,7 +349,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  LOAD	R4	1000
 			  STOR	R4	[R5 + TIMER]
 			  SETI	8
-			  LOAD	R4	8
+			  LOAD	R4	5
 			  STOR	R4	[GB + cerror]
 	sloop4:	  LOAD	R4	[GB + echeck]
 			   CMP	R4	1
@@ -338,7 +360,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BNE	sreturn
 			   BRA	sloop4
 ;
-	sreturn:  LOAD	R4	9
+	sreturn:  LOAD	R4	6
 			  STOR	R4	[GB + cerror]
 			   RTS
 ;
@@ -366,6 +388,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  STOR	R3	[R5 + OUTPUT]
 			  LOAD	R2	999999999
 	loop6:	   BRS	wait1
+			   BRS	ch1
 			   SUB	R2	1
 			   CMP	R2	0
 			   BNE	loop6
@@ -378,11 +401,14 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 	buck:	  LOAD	R3	%0100			; Set LED on
 			  STOR	R3	[R5 + OUTPUT]
 			  LOAD	R2	999999999
-	loop4:	   BRS	wait1
+	loop4:	   BRS	wait1	
+			   BRS	ch1
 			   SUB	R2	1
 			   CMP	R2	0
 			   BNE	loop4
 			  LOAD	R1	[R5 + ADCONVS]	; Load sensor reading to R1
+			   CMP	R1	%011111111
+			   BEQ	er9
 			   CMP	R1	%011100110		; Check if R1 is less than this value
 			   BMI	buck2				; If yes, branch to buck2
 			  LOAD	R4	1
@@ -431,8 +457,7 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   RTS
 ;
 	wait1:	  LOAD	R1	[R5+TIMER]		; Load timer into R1
-	waitloop:  BRS	ch1
-			   CMP	R1	[R5+TIMER]		; Compare R1 to timer
+	waitloop:  CMP	R1	[R5+TIMER]		; Compare R1 to timer
 			   BPL	return				; If 
 			   BRA	waitloop
 ;
@@ -488,9 +513,18 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BEQ	er1
 			   RTS
 ;
+;	Error 14: Color LED is unplugged, sensor unplugged or sensor blocked
 ;
+	er9:	  LOAD	R4	9
+			  STOR	R4	[GB + error]
+			   BRA	error
 ;
-  
+;	Error 15: Fall sensor wires unplugged, or obstruction in falling path
+;
+	erA:	  LOAD	R4	10
+			  STOR	R4	[GB + error]
+			   BRA	error
+			   
 ;
 ;	End of errors
 ;
