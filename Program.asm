@@ -120,9 +120,6 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			  STOR	R4	[GB + cerror]
 			  LOAD	R4	1
 			  STOR	R4	[GB + state]
-			  LOAD	R4	[GB + dcount]
-			   ADD	R4	1
-			  STOR	R4	[GB + dcount]
 			   BRS	sod
 			   BRS	Hex7Seg
 			  STOR	R1	[R5 + DSPSEG]
@@ -162,6 +159,11 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BRA  ploop				; If yes, loop to ploop
 			   
 	skip:	   BRS	oncheck				; BRS to oncheck
+			   BRS	sod
+			   BRS	Hex7Seg
+			  STOR	R1	[R5 + DSPSEG]
+			  LOAD	R1	%0100000
+			  STOR	R1	[R5 + DSPDIG]
 			   BRA	ploop				; Loop back to ploop
 ;
 	oncheck:   CMP	R1 %01				; If R1 is 1
@@ -184,6 +186,20 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   CMP	R1	%0100
 			   BEQ	floop
 			  CLRI	8
+			  LOAD	R4	[GB + dcount]
+			   ADD	R4	1
+			  STOR	R4	[GB + dcount]
+			   XOR	R3	%010000
+			  STOR	R3	[R5 + OUTPUT]
+			  LOAD	R2	999999999
+	loop8:	   BRS	wait1
+			   BRS	ch1
+			   SUB	R2	1
+			   CMP	R2	0
+			   BNE	loop8
+			  LOAD	R1	[R5	+ ADCONVS]
+			   CMP	R1	%000010000
+			   BPL	erB	
 			  LOAD	R4	0
 			   SUB	R4	[R5 + TIMER]
 			  STOR	R4	[R5 + TIMER]
@@ -289,6 +305,8 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   RTS						; return
 ;
 	scheck:	  CLRI	8
+			  LOAD	R4	[R5 + TIMER]
+			  STOR	R4	[GB + tmr]
 			  LOAD	R4	0
 			   SUB	R4	[R5 + TIMER]
 			  STOR	R4	[R5 + TIMER]
@@ -307,6 +325,8 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BRA	sloop
 ;
 	scheck2:  CLRI	8
+			  LOAD	R4	[R5 + TIMER]
+			  STOR	R4	[GB + tmr]
 			  LOAD	R4	0
 			   SUB	R4	[R5 + TIMER]
 			  STOR	R4	[R5 + TIMER]
@@ -325,6 +345,8 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BRA	sloop2
 ;
 	scheck3:  CLRI	8
+			  LOAD	R4	[R5 + TIMER]
+			  STOR	R4	[GB + tmr]
 			  LOAD	R4	0
 			   SUB	R4	[R5 + TIMER]
 			  STOR	R4	[R5 + TIMER]
@@ -343,6 +365,8 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BRA	sloop3
 ;
 	scheck4:  CLRI	8
+			  LOAD	R4	[R5 + TIMER]
+			  STOR	R4	[GB + tmr]
 			  LOAD	R4	0
 			   SUB	R4	[R5 + TIMER]
 			  STOR	R4	[R5 + TIMER]
@@ -362,6 +386,12 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 ;
 	sreturn:  LOAD	R4	6
 			  STOR	R4	[GB + cerror]
+			  LOAD	R4	0
+			   SUB	R4	[R5 + TIMER]
+			  STOR	R4	[R5 + TIMER]
+			  LOAD	R4	[GB + tmr]
+			  STOR	R4	[R5 + TIMER]
+			  SETI	8
 			   RTS
 ;
 ;	End of turning state
@@ -513,18 +543,23 @@ Hex7Seg_bgn:   AND	R0	%01111		; R3 := R0 MOD 16 , just to be safe...
 			   BEQ	er1
 			   RTS
 ;
-;	Error 14: Color LED is unplugged, sensor unplugged or sensor blocked
+;	Error 9: Color LED is unplugged, sensor unplugged or sensor blocked
 ;
 	er9:	  LOAD	R4	9
 			  STOR	R4	[GB + error]
 			   BRA	error
 ;
-;	Error 15: Fall sensor wires unplugged, or obstruction in falling path
+;	Error 10: Fall sensor wires unplugged, or obstruction in falling path
 ;
 	erA:	  LOAD	R4	10
 			  STOR	R4	[GB + error]
 			   BRA	error
-			   
+;
+;	Error 11: Disk detector LED is unplugged, or sensor is obsturcted
+;
+	erB:	  LOAD	R4	11
+			  STOR	R4	[GB + error]
+			   BRA	error
 ;
 ;	End of errors
 ;
