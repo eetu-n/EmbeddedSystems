@@ -613,7 +613,7 @@ recover:	   XOR	R3	%01				; Load 1 to R3
 			   BEQ	rturn3
 			   BRA	rturn1
 			   
-	rskip2:	   BRS	oncheck2
+	rskip2:	   BRS	roncheck2
 			   BRA	rturn1				; If not, loop to turn2
 ;
 	rturn3:	   XOR	R3	%010			; Set motor 2 on
@@ -657,6 +657,13 @@ recover:	   XOR	R3	%01				; Load 1 to R3
 			  STOR	R4	[GB + switch]
 			   RTS						; return			  
 ;
+	roncheck2: LOAD	R1	[R5 + INPUT]
+			   AND	R1	%010
+			   CMP	R1	%010			; If switch 2 is pressed
+			   BNE	return				; NOT return
+			  LOAD	R4	1				; DO set switch to 1
+			  STOR	R4	[GB + switch]
+			   RTS						; return
 ;
 ;	ISRs
 ;
